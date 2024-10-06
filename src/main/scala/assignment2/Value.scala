@@ -262,7 +262,34 @@ case object FalseValue extends BoolValue:
 
   override def receive(msg: Message): Value = {
     msg match
-      // TODO fill this in following the model of TrueValue
+      // TODO
+       // "and": false & x is false, regardless of x
+      case Message("&", Seq(_)) =>
+        this
+      // "or": false | x is x, for any x
+      case Message("|", Seq(that)) =>
+        that
+      case Message("not", Nil) =>
+        TrueValue
+      case Message("asInteger", Nil) =>
+        IntValue(0)
+      case Message("asString", Nil) =>
+        StrValue("false")
+      case Message("=", Seq(TrueValue)) =>
+        FalseValue
+      case Message("=", Seq(FalseValue)) =>
+        TrueValue
+      // Note that we consider "false" to be less than "true"
+      case Message("<", Seq(TrueValue)) =>
+        TrueValue
+      case Message("<", Seq(FalseValue)) =>
+        FalseValue
+      case Message("ifTrue:", Seq(_)) =>
+        NullValue
+      case Message("ifTrue:ifFalse:", Seq(_, falseBlock)) =>
+        falseBlock.receive(Message("value", Nil))
+      case Message("ifFalse:", Seq(falseBlock)) =>
+        falseBlock.receive(Message("value", Nil))
 
       case _ =>
         super.receive(msg)

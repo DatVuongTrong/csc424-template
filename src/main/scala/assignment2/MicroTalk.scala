@@ -10,7 +10,9 @@ import scala.annotation.tailrec
   val predef = Map(
     "true" -> TrueValue,
     "false" -> FalseValue,
-    "nil" -> NullValue
+    "nil" -> NullValue,
+    "pi" -> RealValue(math.Pi),
+    "student" -> StrValue("Dat Vuong")  
   )
 
   /**
