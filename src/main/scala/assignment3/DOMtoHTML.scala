@@ -159,6 +159,54 @@ object DOMtoHTML:
     attributes.find(_.name == name).map(_.value)
   }
 
+  def convertToMarkdown(html: HTML): Seq[String] = {
+    val result = generateHeadMarkdown(html.head) ++ generateBodyMarkdown(html.body)
+    result
+  }
+
+  private def generateHeadMarkdown(head: Head): Seq[String] = {
+    Seq(
+      "---",
+      s"title: ${head.title.title}",
+      "---",
+      ""
+    )
+  }
+
+  private def generateBodyMarkdown(body: Body): Seq[String] = {
+    body.content.flatMap(convertGroupingContentToMarkdown)
+  }
+
+  private def convertGroupingContentToMarkdown(content: GroupingContent): Seq[String] = content match {
+    case GroupingContent.H1(children) => Seq("# " + convertInlineElementsToMarkdown(children), "")
+    case GroupingContent.H2(children) => Seq("## " + convertInlineElementsToMarkdown(children), "")
+    case GroupingContent.H3(children) => Seq("### " + convertInlineElementsToMarkdown(children), "")
+    case GroupingContent.P(children) => Seq(convertInlineElementsToMarkdown(children), "")
+    case GroupingContent.OL(items) => generateListMarkdown(items, ordered = true)
+    case GroupingContent.UL(items) => generateListMarkdown(items, ordered = false)
+    case GroupingContent.HR => Seq("---", "")
+  }
+
+  private def generateListMarkdown(items: Seq[Item], ordered: Boolean): Seq[String] = {
+    val listItems = items.zipWithIndex.map { case (item, idx) =>
+      val prefix = if (ordered) s"${idx + 1}. " else "- "
+      val content = convertInlineElementsToMarkdown(item.children)
+      prefix + content
+    } 
+    listItems :+ ""
+  }
+
+  private def convertInlineElementsToMarkdown(elements: Seq[PhrasingContent]): String = {
+    elements.map(convertPhrasingContentToMarkdown).mkString("")
+  }
+
+  private def convertPhrasingContentToMarkdown(content: PhrasingContent): String = content match {
+    case PhrasingContent.Em(text) => s"*${convertInlineElementsToMarkdown(text)}*"
+    case PhrasingContent.Strong(text) => s"**${convertInlineElementsToMarkdown(text)}**"
+    case PhrasingContent.A(url, linkText) => s"[${convertInlineElementsToMarkdown(linkText)}](${url})"
+    case PhrasingContent.Txt(text) => text
+  }
+
 @main def replHTMLTest(): Unit = {
   import scala.io.StdIn.readLine
   import scala.annotation.tailrec
@@ -175,7 +223,8 @@ object DOMtoHTML:
     else
       DOMtoHTML(input) match
         case Right(html) =>
-          println(html)
+          val markdown=DOMtoHTML.convertToMarkdown(html);
+          println(markdown.mkString("\n"))
         case Left(message) =>
           println("ErrOr: " + message)
       loop
@@ -189,7 +238,8 @@ object DOMtoHTML:
   
   DOMtoHTML(inFile) match
         case Right(html) =>
-          println(html)
+          val markdown=DOMtoHTML.convertToMarkdown(html);
+          println(markdown.mkString("\n"))
         case Left(message) =>
           println("ErrOr: " + message)
 }
